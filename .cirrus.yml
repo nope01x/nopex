@@ -1,0 +1,45 @@
+env:
+  gitconfigs: "ENCRYPTED[!5ff47a2f562ed692fed345ca941d09003dd6ee8d1bf899a0cfe584614af92ab49b3eee597a06fabcbfa10fa7dfaddeaf!]"
+  credensial: "ENCRYPTED[!e28969208da8dadc388a8d2db7eab71061b000b38827b3daf6831357cc3fd3f96e10c16498804e3ff64dbdef2752404b!]"
+  tokentl: "ENCRYPTED[!5e3802db3933ea261446416d449d095f522db0a266bd78341ecd6bce7bc2582ad1d6896140f71931ca555993265b0d37!]"
+  idtl: "ENCRYPTED[!a56e7e6c2a1395cbc8c95cf40ceb6c24f35dc9c3f2a04e7f009bd9981afdc9bf2b9c83f5a2843f4ca038d5b927e9896e!]"
+  GITHUB_TOKEN: "ENCRYPTED[!a9c3fc3b25fc5cd7825ffb910648ba15cac526d5c9a6fdfaa1609d6ea40eefcd11e37a74dd29aafe23a8a97f295665f1!]"
+
+task:
+  name: "Build"
+  timeout_in: 120m
+  container:
+    image: thisfor/ubuntu:latest
+    cpu: 8
+    memory: 32G
+    greedy: true
+
+  gitconfig_file:
+    path: /home/cirrus/.gitconfig
+    variable_name: gitconfigs
+
+  credentials_file:
+    path: /home/cirrus/.git-credentials
+    variable_name: credensial
+
+  notifstart_script:
+    - sendtl -t "Build Started! (<a href='https://cirrus-ci.com/task/${CIRRUS_TASK_ID}'>View On Cirrus CI</a>)"
+
+  sync_script: 
+    - ./build.sh sync
+
+  build_script: 
+    - ./build.sh build
+
+  upload_script:
+    - cd workdir
+    - mkdir -p ~/.config
+    - mv rom/configs/* ~/.config
+    - sendtl -t "Build Susccesfully!"
+    - telegram-upload --to $idtl --caption "$(date)" out/target/product/*/*.zip
+
+  on_failure:
+    notiferror_script:
+      - cd workdir
+      - sendtl -tf "Build Failed!" "out/error.log"
+      - cat "out/error.log"
